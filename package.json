@@ -1,0 +1,37 @@
+{
+  "name": "svod",
+  "version": "0.0.1",
+  "main": "index.js",
+  "private": true,
+  "engines": {
+    "node": "8.2.x"
+  },
+  "scripts": {
+    "test": "",
+    "lint": "eslint src --quiet",
+    "build": "npm run build:worker",
+    "build:worker": "NODE_ENV=worker babel src/worker --out-dir lib/worker"
+  },
+  "repository": "git@github.com:noriaki/svod.git",
+  "author": {
+    "name": "Noriaki Uchiyama",
+    "email": "uchiyama.noriaki@gmail.com",
+    "url": "https://github.com/noriaki"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-eslint": "^7.2.3",
+    "babel-preset-env": "^1.6.0",
+    "babel-preset-stage-0": "^6.24.1",
+    "eslint": "^4.3.0",
+    "eslint-plugin-import": "^2.7.0",
+    "foreman": "^2.0.0"
+  },
+  "dependencies": {
+    "chromy": "^0.3.6",
+    "jackrabbit": "^4.3.0",
+    "logfmt": "^1.2.0",
+    "throng": "^4.0.0"
+  }
+}
