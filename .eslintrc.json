@@ -1,0 +1,38 @@
+{
+  "parser": "babel-eslint",
+  "root": true,
+  "env": {
+    "node": true,
+    "browser": true,
+    "es6": true,
+    "jest": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:import/errors",
+    "plugin:import/warnings"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 2017,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "experimentalObjectRestSpread": true
+    }
+  },
+  "rules": {
+    "indent": ["error", 2],
+    "comma-dangle": ["error", {
+      "arrays": "always-multiline",
+      "objects": "always-multiline",
+      "imports": "always-multiline",
+      "exports": "always-multiline",
+      "functions": "never"
+    }],
+    "no-console": "warn",
+    "no-use-before-define": "off",
+    "no-confusing-arrow": ["error", { "allowParens": true }],
+    "import/no-extraneous-dependencies": [
+      "error", { "dependencies": true, "peerDependencies": true }
+    ]
+  }
+}
