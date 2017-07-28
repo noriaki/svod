@@ -10,7 +10,8 @@
     "test": "",
     "lint": "eslint src --quiet",
     "build": "npm run build:worker",
-    "build:worker": "NODE_ENV=worker babel src/worker --out-dir lib/worker"
+    "build:worker": "NODE_ENV=worker babel src/worker --out-dir lib/worker",
+    "heroku-postbuild": "npm run build"
   },
   "repository": "git@github.com:noriaki/svod.git",
   "author": {
