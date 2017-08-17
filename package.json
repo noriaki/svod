@@ -9,7 +9,7 @@
   "scripts": {
     "test": "",
     "lint": "eslint src --quiet",
-    "batch": "nf run node src/worker"
+    "batch:hulu": "nf run node batch/hulu"
   },
   "repository": "git@github.com:noriaki/svod.git",
   "author": {
