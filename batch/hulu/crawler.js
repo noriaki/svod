@@ -1,3 +1,5 @@
+const partial = require('lodash.partial');
+
 const host = 'www.happyon.jp';
 const baseURL = `https://${host}`;
 const loginURL = `${baseURL}/account/login`;
@@ -34,6 +36,12 @@ const visit = async (page, url, options) => {
 };
 module.visit = visit;
 
+const enhance = page => ({
+  visit: partial(visit, page),
+});
+module.enhance = enhance;
+
 module.exports = {
   visit,
+  enhance,
 };

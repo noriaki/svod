@@ -1,5 +1,5 @@
 const puppeteer = require('puppeteer');
-const { visit } = require('./crawler');
+const { enhance } = require('./crawler');
 
 (async () => {
   const browser = await puppeteer.launch({ headless: false });
@@ -14,7 +14,8 @@ const { visit } = require('./crawler');
   });
   const baseURL = 'https://www.happyon.jp';
   const genreURL = `${baseURL}/tiles/genres/animation`;
-  await visit(page, genreURL, { waitUntil: 'networkidle' });
+  const { visit } = enhance(page);
+  await visit(genreURL, { waitUntil: 'networkidle' });
   await sleep(2000);
 })().then(() => process.exit()).catch(error => console.log(error));
 
