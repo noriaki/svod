@@ -14,9 +14,15 @@ const enhance = require('./crawler');
   });
   const baseURL = 'https://www.happyon.jp';
   const genreURL = `${baseURL}/tiles/genres/animation`;
-  const { visit } = enhance(page);
+  const { visit, getSeries, getSeasons, getEpisodeIds } = enhance(page);
   await visit(genreURL);
-  await sleep(2000);
+  const series = await getSeries();
+  const seriesURL = `${baseURL}/${series[0].slug}/assets?asset_tray_id=-1`;
+  await visit(seriesURL);
+  const seasons = await getSeasons();
+  await visit(seriesURL);
+  const episodeIds = await getEpisodeIds(seasons[0].id);
+  console.log(seasons, episodeIds);
 })().then(() => process.exit()).catch(error => console.log(error));
 
 // error handling
@@ -24,8 +30,6 @@ process.on('unhandledRejection', (err) => {
   console.error(err);
   process.exit(1);
 });
-
-const sleep = msec => new Promise(resolve => setTimeout(resolve, msec));
 
 const genres = [
   ["science_fiction", "SF"],
