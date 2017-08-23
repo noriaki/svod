@@ -6,9 +6,10 @@ const loginURL = `${baseURL}/account/login`;
 const profileGateURL = `${loginURL}/profiles/select`;
 // const genreBaseURL = `${baseURL}/tiles/genres`;
 
-const gotoAndWaitLoad = async (page, url, options = {}) => (
-  await page.goto(url, { waitUntil: 'networkidle', ...options })
-);
+const gotoAndWaitLoad = async (page, url, options = {}) => {
+  await page.goto(url, { waitUntil: 'networkidle', ...options });
+  await prepare(page);
+};
 module.gotoAndWaitLoad = gotoAndWaitLoad;
 
 const login = async (page) => {
@@ -50,6 +51,14 @@ const visit = async (page, url, options) => {
 };
 module.visit = visit;
 
+const prepare = page => (
+  page.evaluate(() => {
+    const header = document.querySelector('header');
+    if (header != null) { header.style.position = 'relative'; }
+  })
+);
+module.prepare = prepare;
+
 const domScrollForPagination = page => (
   page.evaluate(() => window.scrollTo(0, document.body.scrollHeight - 1000))
 )
@@ -67,19 +76,40 @@ const domScrollToPageBottom = async (page) => {
 };
 module.domScrollToPageBottom = domScrollToPageBottom;
 
+const waitForLoadItem = (page) => (page.waitFor(
+  [
+    '.vod-mod-no-result[style~="display:"][style~="block;"]',
+    '.vod-mod-content .vod-mod-tile__item',
+  ].join(),
+  { timeout: 10000 }
+));
+module.waitForLoadItem = waitForLoadItem;
+
+const selectSeasonTab = async (page, seasonId) => {
+  const targetId = seasonId !== undefined ? seasonId : '';
+  await page.click([
+    '.vod-mod-tab__tabs[data-asset-tray-id-for="-1"]',
+    ` > ul > li > button[value="${targetId}"]`,
+  ].join(''));
+  await waitForLoadItem(page);
+}
+module.selectSeasonTab = selectSeasonTab;
+
 const getSeries = async (page) => {
-  await page.waitFor('.vod-mod-content .vod-mod-tile__item');
+  await waitForLoadItem(page);
   await domScrollToPageBottom(page);
   return page.evaluate(({ tileSelector, panelSelector }) => (
     [...document.querySelectorAll(tileSelector)].map(e => {
-      const id = e.getAttribute('href').split('/').pop();
+      const identifier = e.getAttribute('href').split('/').pop();
       const title = e.getAttribute('data-tracking-panel-title');
-      const genres = [...e.parentNode.querySelectorAll(panelSelector)].map(a => {
-        const id = a.getAttribute('href').split('/').pop();
-        const title = a.textContent.trim();
-        return { id, slug: id, title };
+      const genres = [
+        ...e.parentNode.querySelectorAll(panelSelector),
+      ].map(link => {
+        const identifier = link.getAttribute('href').split('/').pop();
+        const title = link.textContent.trim();
+        return { identifier, slug: identifier, title };
       })
-      return { id, slug: id, title, genres };
+      return { identifier, slug: identifier, title, genres };
     })
   ), {
     tileSelector: '.vod-mod-content .vod-mod-tile__item > a',
@@ -89,25 +119,20 @@ const getSeries = async (page) => {
 module.getSeries = getSeries;
 
 const getSeasons = async (page) => {
-  await page.waitFor('.vod-mod-content .vod-mod-tile__item');
-  return page.evaluate(selector => (
-    [...document.querySelectorAll(selector)].map(season => {
-      const id = season.getAttribute('value');
+  await waitForLoadItem(page);
+  const seasons = await page.evaluate(selector => (
+    [...document.querySelectorAll(selector)].map((season, index) => {
+      const identifier = season.getAttribute('value');
       const title = season.innerText.trim();
-      return { id, slug: id, title };
+      return { identifier, slug: identifier, title, index };
     })
   ), '.vod-mod-tab__tabs[data-asset-tray-id-for="-1"] > ul > li > button:not([value=""])');
+  return seasons.length > 0 ? seasons : [undefined];
 };
 module.getSeasons = getSeasons;
 
-const getEpisodeIds = async (page, seasonId) => {
-  if (seasonId != null) {
-    await page.click([
-      '.vod-mod-tab__tabs[data-asset-tray-id-for="-1"]',
-      ` > ul > li > button[value="${seasonId}"]`,
-    ].join(''));
-  }
-  await page.waitFor('.vod-mod-content .vod-mod-tile__item');
+const getEpisodeIds = async (page) => {
+  await waitForLoadItem(page);
   await domScrollToPageBottom(page);
   const paths = await page.evaluate(s => (
     [...document.querySelectorAll(s)].map(link => link.getAttribute('href'))
@@ -116,16 +141,34 @@ const getEpisodeIds = async (page, seasonId) => {
 };
 module.getEpisodeIds = getEpisodeIds;
 
+const hasSubtitled = async (page) => (
+  Boolean(await page.$('input[name="subdub_type"]'))
+);
+module.hasSubtitled = hasSubtitled;
+
+const changeSubtitled = async (page, value) => {
+  // @value: enum ['subtitled', 'dubbed'] or undefined
+  const cond = value !== undefined ? `[value="${value}"]` : ':not(:checked)';
+  const element = await page.$(`input[name="subdub_type"]${cond}`);
+  await element.evaluate(input => input.click());
+};
+module.changeSubtitled = changeSubtitled;
+
 const enhance = page => ({
   gotoAndWaitLoad: partial(gotoAndWaitLoad, page),
   login: partial(login, page),
   selectProfile: partial(selectProfile, page),
   visit: partial(visit, page),
+  prepare: partial(prepare, page),
   domScrollForPagination: partial(domScrollForPagination, page),
   domScrollToPageBottom: partial(domScrollToPageBottom, page),
+  waitForLoadItem: partial(waitForLoadItem, page),
+  selectSeasonTab: partial(selectSeasonTab, page),
   getSeries: partial(getSeries, page),
   getSeasons: partial(getSeasons, page),
   getEpisodeIds: partial(getEpisodeIds, page),
+  hasSubtitled: partial(hasSubtitled, page),
+  changeSubtitled: partial(changeSubtitled, page),
 });
 module.enhance = enhance;
 
