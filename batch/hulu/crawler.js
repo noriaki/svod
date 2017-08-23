@@ -95,6 +95,23 @@ const selectSeasonTab = async (page, seasonId) => {
 }
 module.selectSeasonTab = selectSeasonTab;
 
+const getToken = (page, token) => {
+  const endpoint = `https://api.happyon.jp/v1/auth/token?app_version=1.0&device_higher_category=PC&device_lower_category=CHROME&_=${Date.now()}`;
+  const headers = {
+    'Accept-Language': 'ja',
+    'Authorization': `extra ${token}`,
+    'Content-Type': 'application/json',
+  };
+  return fetch(endpoint, { headers })
+    .then(res => res.json()).then(json => json.access_token);
+};
+module.getToken = getToken;
+
+const getTokenFromCookie = page => page.evaluate(() => (
+  document.cookie.split('; ').find(c => /^token=/.test(c)).split('=').pop()
+));
+module.getTokenFromCookie = getTokenFromCookie;
+
 const getSeries = async (page) => {
   await waitForLoadItem(page);
   await domScrollToPageBottom(page);
