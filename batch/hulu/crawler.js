@@ -1,4 +1,5 @@
 const partial = require('lodash.partial');
+const fetch = require('node-fetch');
 
 const host = 'www.happyon.jp';
 const baseURL = `https://${host}`;
@@ -13,14 +14,16 @@ const gotoAndWaitLoad = async (page, url, options = {}) => {
 module.gotoAndWaitLoad = gotoAndWaitLoad;
 
 const login = async (page) => {
-  if (await page.url() !== loginURL) {
+  if ((await page.url()) !== loginURL) {
     await gotoAndWaitLoad(page, loginURL);
+    if ((await page.url()) !== loginURL) { return; }
   }
   await page.focus('#form_account_email');
   await page.type(process.env.SVOD_ACCOUNTS_HULU_ID);
   await page.focus('#form_account_password');
   await page.type(process.env.SVOD_ACCOUNTS_HULU_PW);
   await page.click('#new_form_account button[type=submit]');
+  await page.waitForNavigation({ timeout: 10000 });
 };
 module.login = login;
 
@@ -34,18 +37,29 @@ const selectProfile = async (page) => {
   await page.click(
     `.vod-mod-profile-list__item:nth-child(${i + 1}) input[type=image]`
   );
+  await page.waitForNavigation({ timeout: 10000 });
 }
 module.selectProfile = selectProfile;
 
+const isLoggedIn = page => page.evaluate(() => (
+  Boolean(window.isLoggedIn) ||
+    Boolean(document.querySelector('.vod-mod-header__user-menu button > span'))
+));
+module.isLoggedIn = isLoggedIn;
+
 const visit = async (page, url, options) => {
-  if (url !== await page.url()) {
+  if (url !== (await page.url())) {
     await gotoAndWaitLoad(page, url, options);
   } else {
     return;
   }
-  if (await page.url() === loginURL) { await login(page); }
-  if (await page.url() === profileGateURL) { await selectProfile(page); }
-  if (url !== await page.url()) {
+  if (!await isLoggedIn(page) && (await page.url()) !== profileGateURL) {
+    await login(page);
+  }
+  if ((await page.url()) === profileGateURL) {
+    await selectProfile(page);
+  }
+  if (url !== (await page.url())) {
     await gotoAndWaitLoad(page, url, options);
   }
 };
@@ -94,18 +108,6 @@ const selectSeasonTab = async (page, seasonId) => {
   await waitForLoadItem(page);
 }
 module.selectSeasonTab = selectSeasonTab;
-
-const getToken = (page, token) => {
-  const endpoint = `https://api.happyon.jp/v1/auth/token?app_version=1.0&device_higher_category=PC&device_lower_category=CHROME&_=${Date.now()}`;
-  const headers = {
-    'Accept-Language': 'ja',
-    'Authorization': `extra ${token}`,
-    'Content-Type': 'application/json',
-  };
-  return fetch(endpoint, { headers })
-    .then(res => res.json()).then(json => json.access_token);
-};
-module.getToken = getToken;
 
 const getTokenFromCookie = page => page.evaluate(() => (
   document.cookie.split('; ').find(c => /^token=/.test(c)).split('=').pop()
@@ -158,6 +160,19 @@ const getEpisodeIds = async (page) => {
 };
 module.getEpisodeIds = getEpisodeIds;
 
+const getEpisode = (page, episodeId, tokenFromCookie, tokenFromJson) => {
+  const endpoint = 'https://api.happyon.jp/v1/playback/videos/';
+  const token = tokenFromJson ? `&token=${tokenFromJson}` : '';
+  const url = `${endpoint}${episodeId}?_=${Date.now()}${token}`;
+  const headers = {
+    'Accept-Language': 'ja',
+    'Authorization': `extra ${tokenFromCookie}`,
+    'Content-Type': 'application/json',
+  };
+  return fetch(url, { headers }).then(res => res.json());
+};
+module.getEpisode = getEpisode;
+
 const hasSubtitled = async (page) => (
   Boolean(await page.$('input[name="subdub_type"]'))
 );
@@ -171,22 +186,28 @@ const changeSubtitled = async (page, value) => {
 };
 module.changeSubtitled = changeSubtitled;
 
-const enhance = page => ({
-  gotoAndWaitLoad: partial(gotoAndWaitLoad, page),
-  login: partial(login, page),
-  selectProfile: partial(selectProfile, page),
-  visit: partial(visit, page),
-  prepare: partial(prepare, page),
-  domScrollForPagination: partial(domScrollForPagination, page),
-  domScrollToPageBottom: partial(domScrollToPageBottom, page),
-  waitForLoadItem: partial(waitForLoadItem, page),
-  selectSeasonTab: partial(selectSeasonTab, page),
-  getSeries: partial(getSeries, page),
-  getSeasons: partial(getSeasons, page),
-  getEpisodeIds: partial(getEpisodeIds, page),
-  hasSubtitled: partial(hasSubtitled, page),
-  changeSubtitled: partial(changeSubtitled, page),
-});
+const enhance = page => [
+  gotoAndWaitLoad,
+  login,
+  selectProfile,
+  isLoggedIn,
+  visit,
+  prepare,
+  domScrollForPagination,
+  domScrollToPageBottom,
+  waitForLoadItem,
+  selectSeasonTab,
+  getTokenFromCookie,
+  getSeries,
+  getSeasons,
+  getEpisodeIds,
+  getEpisode,
+  hasSubtitled,
+  changeSubtitled,
+].reduce((methods, method) => {
+  methods[method.name] = partial(method, page);
+  return methods;
+}, {});
 module.enhance = enhance;
 
 module.exports = enhance;
