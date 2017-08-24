@@ -57,3 +57,6 @@ typings/
 
 # dotenv environment variables file
 .env
+
+# for using npm in heroku/travis
+yarn.lock
