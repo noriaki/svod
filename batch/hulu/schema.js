@@ -42,6 +42,7 @@ const episodeSchema = new Schema({
     required: true,
   },
   title: { type: String, index: true },
+  index: Number,
   duration: Number,
   subtitled: Boolean,
   movie: Boolean,
