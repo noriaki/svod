@@ -72,7 +72,7 @@ class Episode {
   static async firstOrCreate(query, doc) {
     const episode = await this.findOne(query);
     if (episode) { return { episode, newRecord: false }; }
-    return { episode: this.create(doc), newRecord: true };
+    return { episode: await this.create(doc), newRecord: true };
   }
 
   // return true if more than 20 hours passed or force
