@@ -31,8 +31,11 @@ const { episodeSchema } = require('./schema');
     getEpisodeIds,
     hasSubtitled,
     changeSubtitled,
+    resetWatchings,
   } = enhance(page);
 
+  await resetWatchings();
+  const currentTime = Date.now();
   const seriesIds = [];
 
   for (const [genreId, genreName] of genresSet) {
@@ -44,7 +47,7 @@ const { episodeSchema } = require('./schema');
     for (const seriesPiece of seriesSet) {
       const { genres, ...series } = seriesPiece;
       if (seriesIds.includes(series.identifier)) {
-        console.log('### %s (%s) skip', series.title, series.identifier);
+        console.log('### %s (%s) skipped', series.title, series.identifier);
         continue;
       } else {
         console.log('### %s (%s)', series.title, series.identifier);
@@ -69,12 +72,21 @@ const { episodeSchema } = require('./schema');
         }
 
         for (const identifier of episodeIds) {
-          const episode = await HuluEpisode.findOneAndUpdate(
-            { identifier },
-            { identifier, service, genres, series, season, active, processing },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
-          );
-          console.log('%s: %s', episode.id, identifier);
+          const query = { identifier };
+          const doc = {
+            ...query, service, genres, series, season, active, processing,
+          };
+          const { episode, newRecord } = await HuluEpisode.firstOrCreate(query, doc);
+          if (!newRecord) {
+            if (episode.isOld(currentTime)) {
+              await episode.update({ ...doc, active: true });
+              console.log('%s (%s) updated', episode.id, identifier);
+            } else {
+              console.log('%s (%s) skipped', episode.id, identifier);
+            }
+          } else {
+            console.log('%s (%s) created', episode.id, identifier);
+          }
         }
         await sleep(500);
       }
@@ -83,7 +95,7 @@ const { episodeSchema } = require('./schema');
   }
 })().then(() => process.exit()).catch((error) => {
   console.log(error);
-  process.exit(1);
+  //process.exit(1);
 });
 
 // error handling
