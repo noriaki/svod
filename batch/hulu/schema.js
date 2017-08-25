@@ -68,6 +68,22 @@ const episodeSchema = new Schema({
   timestamps: true,
 });
 
+class Episode {
+  static async firstOrCreate(query, doc) {
+    const episode = await this.findOne(query);
+    if (episode) { return { episode, newRecord: false }; }
+    return { episode: this.create(doc), newRecord: true };
+  }
+
+  // return true if more than 20 hours passed or force
+  isOld(now = Date.now(), force = false) {
+    if (force) { return true; }
+    const delta = new Date(now).getTime() - this.updatedAt.getTime();
+    return delta > (20 * 60 * 60 * 1000);
+  }
+}
+episodeSchema.loadClass(Episode);
+
 module.exports = {
   genreSchema,
   seriesSchema,
