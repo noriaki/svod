@@ -36,7 +36,14 @@ const { postMessage, buildMessage, buildErrorMessage } = require('../slack');
     resetWatchings,
   } = enhance(page);
 
-  await resetWatchings();
+  try {
+    await resetWatchings();
+  } catch (err) {
+    await postMessage({
+      ...buildErrorMessage(err),
+      title_ink: await page.url(),
+    });
+  }
   const currentTime = Date.now();
   const seriesIds = [];
 

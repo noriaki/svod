@@ -198,7 +198,8 @@ const resetWatchings = async (page) => {
     await page.click('.vod-mod-tab__all-checked > button');
     await page.click('.vod-mod-tab__submit > button');
     await page.waitFor(
-      '.vod-mod-no-result--type02[style~="display:"][style~="block;"]'
+      '.vod-mod-no-result--type02[style~="display:"][style~="block;"]',
+      { timeout: 10004 }
     );
   }
 };
