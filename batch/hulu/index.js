@@ -1,37 +1,118 @@
 const puppeteer = require('puppeteer');
 const enhance = require('./crawler');
+const { createConnection } = require('../db');
+const { episodeSchema } = require('./schema');
+const { postMessage, buildMessage, buildErrorMessage } = require('../slack');
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: false });
+  const connection = createConnection();
+  const HuluEpisode = connection.model('HuluEpisode', episodeSchema);
+
+  // const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch();
   const page = await browser.newPage();
   await page.setRequestInterceptionEnabled(true);
   page.on('request', (request) => {
-    if (/\.(png|jpg|jpeg|gif|webp)$/.test(request.url)) {
+    if (/\.(png|jpg|jpeg|gif|webp)($|[?#])/.test(request.url)) {
       request.abort();
-    } else {
+    } else if (/^https?:\/\/([^/]*\.|)happyon\.jp\//.test(request.url)) {
       request.continue();
+    } else {
+      request.abort();
     }
   });
+  const service = 'hulu';
+  const active = false;
+  const processing = true;
   const baseURL = 'https://www.happyon.jp';
-  const genreURL = `${baseURL}/tiles/genres/animation`;
-  const { visit, getSeries, getSeasons, getEpisodeIds } = enhance(page);
-  await visit(genreURL);
-  const series = await getSeries();
-  const seriesURL = `${baseURL}/${series[0].slug}/assets?asset_tray_id=-1`;
-  await visit(seriesURL);
-  const seasons = await getSeasons();
-  await visit(seriesURL);
-  const episodeIds = await getEpisodeIds(seasons[0].id);
-  console.log(seasons, episodeIds);
-})().then(() => process.exit()).catch(error => console.log(error));
+  const {
+    visit,
+    selectSeasonTab,
+    getSeries,
+    getSeasons,
+    getEpisodeIds,
+    hasSubtitled,
+    changeSubtitled,
+    resetWatchings,
+  } = enhance(page);
 
-// error handling
-process.on('unhandledRejection', (err) => {
-  console.error(err);
-  process.exit(1);
+  await resetWatchings();
+  const currentTime = Date.now();
+  const seriesIds = [];
+
+  for (const [genreId, genreName] of genresSet) {
+    console.log('## %s (%s)', genreName, genreId);
+    const genreURL = `${baseURL}/tiles/genres/${genreId}`;
+    await postMessage(buildMessage({
+      title: 'Start to crawling genres',
+      text: `${genreName} (${genreId})`,
+    }));
+    await visit(genreURL);
+    const seriesSet = await getSeries();
+
+    for (const seriesPiece of seriesSet) {
+      const { genres, ...series } = seriesPiece;
+      if (seriesIds.includes(series.identifier)) {
+        console.log('### %s (%s) skipped', series.title, series.identifier);
+        continue;
+      } else {
+        console.log('### %s (%s)', series.title, series.identifier);
+      }
+      const seriesURL =
+              `${baseURL}/${series.identifier}/assets?asset_tray_id=-1`;
+      await visit(seriesURL);
+      const seasons = await getSeasons();
+
+      for (const season of seasons) {
+        let seasonId;
+        // let seasonMongoObj;
+        if (season !== undefined) {
+          seasonId = season.identifier;
+          console.log('#### %s (%s)', season.title, seasonId);
+        }
+        await selectSeasonTab(seasonId);
+        const episodeIds = await getEpisodeIds();
+        if (await hasSubtitled()) {
+          await changeSubtitled();
+          episodeIds.push(...(await getEpisodeIds()));
+        }
+
+        for (const identifier of episodeIds) {
+          const query = { identifier };
+          const doc = {
+            ...query, service, genres, series, season, active, processing,
+          };
+          const { episode, newRecord } = await HuluEpisode.firstOrCreate(query, doc);
+          if (!newRecord) {
+            if (episode.isOld(currentTime)) {
+              await episode.update({ ...doc, active: true });
+              console.log('%s (%s) updated', episode.id, identifier);
+            } else {
+              console.log('%s (%s) skipped', episode.id, identifier);
+            }
+          } else {
+            console.log('%s (%s) created', episode.id, identifier);
+          }
+        }
+        await sleep(500);
+      }
+      seriesIds.push(series.identifier);
+    }
+  }
+})().then(() => process.exit()).catch((error) => {
+  console.log(error);
+  postMessage(buildErrorMessage(error)).then(() => process.exit(1));
 });
 
-const genres = [
+// error handling
+process.on('unhandledRejection', (error) => {
+  console.error(error);
+  postMessage(buildErrorMessage(error)).then(() => process.exit(1));
+});
+
+const sleep = msec => new Promise(resolve => setTimeout(resolve, msec));
+
+const genresSet = [
   ["science_fiction", "SF"],
   ["human_drama", "ヒューマンドラマ"],
   ["animation", "アニメ"],
