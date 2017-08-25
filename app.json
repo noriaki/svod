@@ -1,0 +1,20 @@
+{
+  "name": "svod",
+  "scripts": {},
+  "env": {
+    "SLACK_API_TOKEN": { "required": true },
+    "SLACK_ROOMID": { "required": true },
+    "SVOD_ACCOUNTS_HULU_ID": { "required": true },
+    "SVOD_ACCOUNTS_HULU_NAME": { "required": true },
+    "SVOD_ACCOUNTS_HULU_PW": { "required": true }
+  },
+  "formation": {},
+  "addons": [
+    "mongolab",
+    "papertrail"
+  ],
+  "buildpacks": [
+    { "url": "heroku/nodejs" },
+    { "url": "https://github.com/mikeraimondi/heroku-buildpack-google-chrome" }
+  ]
+}
