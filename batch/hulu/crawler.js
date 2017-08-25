@@ -24,7 +24,7 @@ const login = async (page) => {
   await page.focus('#form_account_password');
   await page.type(process.env.SVOD_ACCOUNTS_HULU_PW);
   await page.click('#new_form_account button[type=submit]');
-  await page.waitForNavigation({ timeout: 10000 });
+  await page.waitForNavigation({ timeout: 10001 });
 };
 module.login = login;
 
@@ -38,7 +38,7 @@ const selectProfile = async (page) => {
   await page.click(
     `.vod-mod-profile-list__item:nth-child(${i + 1}) input[type=image]`
   );
-  await page.waitForNavigation({ timeout: 10000 });
+  await page.waitForNavigation({ timeout: 10002 });
 }
 module.selectProfile = selectProfile;
 
@@ -98,7 +98,7 @@ const waitForLoadItem = (page) => (page.waitFor(
     '.vod-mod-content .vod-mod-tile__item',
     '.vod-mod-content .vod-mod-tile02__item',
   ].join(),
-  { timeout: 10000 }
+  { timeout: 10003 }
 ));
 module.waitForLoadItem = waitForLoadItem;
 
