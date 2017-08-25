@@ -6,6 +6,7 @@ const baseURL = `https://${host}`;
 const loginURL = `${baseURL}/account/login`;
 const profileGateURL = `${loginURL}/profiles/select`;
 // const genreBaseURL = `${baseURL}/tiles/genres`;
+const watchingsURL = `${baseURL}/profile/lists/watchings`;
 
 const gotoAndWaitLoad = async (page, url, options = {}) => {
   await page.goto(url, { waitUntil: 'networkidle', ...options });
@@ -74,7 +75,7 @@ const prepare = page => (
 module.prepare = prepare;
 
 const domScrollForPagination = page => (
-  page.evaluate(() => window.scrollTo(0, document.body.scrollHeight - 1000))
+  page.evaluate(() => window.scrollTo(0, document.body.scrollHeight - 700))
 )
 module.domScrollForPagination = domScrollForPagination;
 
@@ -93,7 +94,9 @@ module.domScrollToPageBottom = domScrollToPageBottom;
 const waitForLoadItem = (page) => (page.waitFor(
   [
     '.vod-mod-no-result[style~="display:"][style~="block;"]',
+    '.vod-mod-no-result--type02[style~="display:"][style~="block;"]',
     '.vod-mod-content .vod-mod-tile__item',
+    '.vod-mod-content .vod-mod-tile02__item',
   ].join(),
   { timeout: 10000 }
 ));
@@ -186,6 +189,21 @@ const changeSubtitled = async (page, value) => {
 };
 module.changeSubtitled = changeSubtitled;
 
+const resetWatchings = async (page) => {
+  await visit(page, watchingsURL);
+  await waitForLoadItem(page);
+  if (await page.$('.vod-mod-content .vod-mod-tile02__item')) {
+    await domScrollToPageBottom(page);
+    await page.click('.vod-mod-tab__enable-delete-mode > button');
+    await page.click('.vod-mod-tab__all-checked > button');
+    await page.click('.vod-mod-tab__submit > button');
+    await page.waitFor(
+      '.vod-mod-no-result--type02[style~="display:"][style~="block;"]'
+    );
+  }
+};
+module.resetWatchings = resetWatchings;
+
 const enhance = page => [
   gotoAndWaitLoad,
   login,
@@ -204,6 +222,7 @@ const enhance = page => [
   getEpisode,
   hasSubtitled,
   changeSubtitled,
+  resetWatchings,
 ].reduce((methods, method) => {
   methods[method.name] = partial(method, page);
   return methods;
