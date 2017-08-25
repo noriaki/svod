@@ -24,6 +24,7 @@
     "foreman": "^2.0.0"
   },
   "dependencies": {
+    "@slack/client": "^3.12.0",
     "lodash.partial": "^4.2.1",
     "mongoose": "^4.11.7",
     "node-fetch": "^1.7.2",
