@@ -3,18 +3,20 @@ const enhance = require('./crawler');
 const { createConnection } = require('../db');
 const { episodeSchema } = require('./schema');
 
-const connection = createConnection();
-const HuluEpisode = connection.model('HuluEpisode', episodeSchema);
-
 (async () => {
-  const browser = await puppeteer.launch(/*{ headless: false }*/);
+  const connection = createConnection();
+  const HuluEpisode = connection.model('HuluEpisode', episodeSchema);
+
+  const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
   await page.setRequestInterceptionEnabled(true);
   page.on('request', (request) => {
     if (/\.(png|jpg|jpeg|gif|webp)($|[?#])/.test(request.url)) {
       request.abort();
-    } else {
+    } else if (/^https?:\/\/([^/]*\.|)happyon\.jp\//.test(request.url)) {
       request.continue();
+    } else {
+      request.abort();
     }
   });
   const service = 'hulu';
