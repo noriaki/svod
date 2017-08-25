@@ -41,7 +41,7 @@ const { postMessage, buildMessage, buildErrorMessage } = require('../slack');
   } catch (err) {
     await postMessage({
       ...buildErrorMessage(err),
-      title_ink: await page.url(),
+      title_link: await page.url(),
     });
   }
   const currentTime = Date.now();
