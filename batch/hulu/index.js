@@ -7,7 +7,8 @@ const { episodeSchema } = require('./schema');
   const connection = createConnection();
   const HuluEpisode = connection.model('HuluEpisode', episodeSchema);
 
-  const browser = await puppeteer.launch({ headless: false });
+  // const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch();
   const page = await browser.newPage();
   await page.setRequestInterceptionEnabled(true);
   page.on('request', (request) => {
@@ -95,7 +96,7 @@ const { episodeSchema } = require('./schema');
   }
 })().then(() => process.exit()).catch((error) => {
   console.log(error);
-  //process.exit(1);
+  process.exit(1);
 });
 
 // error handling
