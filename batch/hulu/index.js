@@ -8,8 +8,8 @@ const { postMessage, buildMessage, buildErrorMessage } = require('../slack');
   const connection = createConnection();
   const HuluEpisode = connection.model('HuluEpisode', episodeSchema);
 
-  // const browser = await puppeteer.launch({ headless: false });
-  const browser = await puppeteer.launch();
+  // const browser = await puppeteer.launch({ headless: false, args: ['--no-sandbox'] });
+  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
   const page = await browser.newPage();
   await page.setRequestInterceptionEnabled(true);
   page.on('request', (request) => {
