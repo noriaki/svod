@@ -2,6 +2,7 @@ const puppeteer = require('puppeteer');
 const enhance = require('./crawler');
 const { createConnection } = require('../db');
 const { episodeSchema } = require('./schema');
+const { postMessage, buildMessage, buildErrorMessage } = require('../slack');
 
 (async () => {
   const connection = createConnection();
@@ -42,6 +43,10 @@ const { episodeSchema } = require('./schema');
   for (const [genreId, genreName] of genresSet) {
     console.log('## %s (%s)', genreName, genreId);
     const genreURL = `${baseURL}/tiles/genres/${genreId}`;
+    await postMessage(buildMessage({
+      title: 'Start to crawling genres',
+      text: `${genreName} (${genreId})`,
+    }));
     await visit(genreURL);
     const seriesSet = await getSeries();
 
@@ -96,13 +101,13 @@ const { episodeSchema } = require('./schema');
   }
 })().then(() => process.exit()).catch((error) => {
   console.log(error);
-  process.exit(1);
+  postMessage(buildErrorMessage(error)).then(() => process.exit(1));
 });
 
 // error handling
 process.on('unhandledRejection', (error) => {
   console.error(error);
-  process.exit(1);
+  postMessage(buildErrorMessage(error)).then(() => process.exit(1));
 });
 
 const sleep = msec => new Promise(resolve => setTimeout(resolve, msec));
