@@ -18,20 +18,23 @@ const promisedPostMessage = (...messages) => {
 };
 module.postMessage = promisedPostMessage;
 
-const buildMessage = ({ title, text, time }) => ({
+const buildMessage = ({ title, text, time, color = 'good', pretext = '' }) => ({
   fallback: `${title}: ${text}`,
+  pretext,
   title,
   text,
-  color: 'good',
+  color,
   ts: time || (Date.now() / 1000),
 });
 module.buildMessage = buildMessage;
 
-const buildErrorMessage = (error) => ({
+const buildErrorMessage = (error, pretext = '') => ({
   fallback: `${error.name}: ${error.message}`,
+  pretext,
   title: error.name,
   text: error.message,
   color: 'danger',
+  ts: Date.now() / 1000,
 });
 module.buildErrorMessage = buildErrorMessage;
 
