@@ -31,11 +31,18 @@ const { postMessage, buildMessage, buildErrorMessage } = require('../slack');
   }));
 
   let episode = await HuluEpisode.findOne({ processing: true });
+  await postMessage(buildMessage({
+    title: 'Retrieve episode',
+    text: episode.identifier,
+    color: '#439FE0',
+  }));
   let token;
   await visit(baseURL);
   while (episode) {
     const tokenFromCookie = await getTokenFromCookie();
+    console.log(tokenFromCookie);
     const data = await getEpisode(episode.identifier, tokenFromCookie, token);
+    console.log(data);
     await episode.update({ active, processing, ...videoInfo(data.video) });
     console.log('%s: %s', episode.id, episode.identifier);
     episode = await HuluEpisode.findOne({ processing: true });
